@@ -1,7 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { AuthResponse } from "@/shared/api/auth";
 
-export const API_URL = "http://localhost:8080";
+export const API_URL = "http://localhost:8081";
 
 export const api = axios.create({
     baseURL: API_URL,
