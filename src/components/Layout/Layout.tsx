@@ -40,6 +40,10 @@ const Layout = () => {
         navigate("/");
     };
 
+    const handleTerrain = () => {
+        navigate("/terrain");
+    };
+
     if (loading) {
         return (
             <div className="layout-loading">
@@ -58,6 +62,11 @@ const Layout = () => {
                     <h1 className="logo" onClick={handleLogoClick}>
                         Сервис курсов
                     </h1>
+                    <nav className="header-nav">
+                        <button className="nav-link" onClick={handleTerrain}>
+                            Генерация ландшафта
+                        </button>
+                    </nav>
                 </div>
                 <div className="header-right">
                     <div className="user-info">

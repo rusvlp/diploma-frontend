@@ -1,7 +1,8 @@
 .layout {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .layout-loading {
@@ -65,6 +66,31 @@
 
 .logo:hover {
     opacity: 0.8;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 24px;
+}
+
+.nav-link {
+    background: none;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-family: inherit;
+}
+
+.nav-link:hover {
+    background: #f1f5f9;
+    color: #667eea;
 }
 
 .header-right {
@@ -163,6 +189,8 @@
 
 .layout-main {
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 

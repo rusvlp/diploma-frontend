@@ -1,0 +1,236 @@
+/* ── Root: viewer | right panel ── */
+.tp-root {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── LEFT — 3D viewer ── */
+.tp-viewer {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0d1117;
+}
+
+.tp-viewer .terrain-viewer {
+    flex: 1;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
+.tp-empty-viewer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.25);
+    font-size: 15px;
+}
+
+/* ── RIGHT panel ── */
+.tp-panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+
+/* generic section padding */
+.tp-section {
+    padding: 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* title */
+.tp-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+/* form */
+.tp-form { display: flex; flex-direction: column; gap: 10px; }
+
+.tp-upload {
+    border: 2px dashed rgba(255,255,255,0.25);
+    border-radius: 10px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.tp-upload:hover { border-color: rgba(255,255,255,0.55); }
+.tp-upload-hint {
+    color: rgba(255,255,255,0.45);
+    font-size: 12px;
+    text-align: center;
+    padding: 14px;
+    line-height: 1.5;
+}
+.tp-preview { width: 100%; max-height: 150px; object-fit: cover; display: block; }
+.tp-hidden { display: none; }
+
+.tp-params { display: flex; flex-direction: column; gap: 8px; }
+.tp-param-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+}
+.tp-input {
+    padding: 6px 9px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 7px;
+    background: rgba(255,255,255,0.07);
+    color: white;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.tp-input:focus { border-color: rgba(255,255,255,0.45); }
+.tp-input option { background: #2d2d4a; color: white; }
+
+.tp-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+}
+.tp-checkbox input { width: 14px; height: 14px; cursor: pointer; accent-color: #6c63ff; }
+
+.tp-error { color: #fca5a5; font-size: 12px; margin: 0; }
+
+.tp-submit {
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s, transform 0.1s;
+}
+.tp-submit:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.tp-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* active job */
+.tp-active-job { display: flex; flex-direction: column; gap: 5px; }
+.tp-shimmer {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #667eea 25%, #764ba2 50%, #667eea 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.tp-active-hint { font-size: 11px; color: rgba(255,255,255,0.45); margin: 0; }
+
+/* downloads */
+.tp-downloads { display: flex; flex-direction: column; gap: 5px; }
+.tp-dl-link {
+    display: block;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 7px;
+    color: #c4b5fd;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+.tp-dl-link:hover { background: rgba(255,255,255,0.15); }
+
+/* ── Limit ── */
+.tp-limit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: white;
+}
+.tp-limit-row { display: flex; justify-content: space-between; font-size: 12px; }
+.tp-limit-val { font-weight: 700; }
+.tp-limit-val.exhausted { color: #fca5a5; }
+.tp-limit-bar-wrap { height: 5px; background: rgba(255,255,255,0.18); border-radius: 3px; overflow: hidden; }
+.tp-limit-bar { height: 100%; background: white; border-radius: 3px; transition: width 0.4s; }
+.tp-limit-reset { font-size: 11px; opacity: 0.55; }
+
+/* ── History — takes remaining vertical space ── */
+.tp-history-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.tp-history-title {
+    margin: 0;
+    padding: 14px 16px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.tp-history-scroll {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.tp-history-empty {
+    padding: 14px 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    margin: 0;
+}
+
+.tp-history-list { list-style: none; margin: 0; padding: 0; }
+
+.tp-hi-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: default;
+    transition: background 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.tp-hi-item.s-done { cursor: pointer; }
+.tp-hi-item.s-done:hover { background: rgba(255,255,255,0.06); }
+.tp-hi-item.active { background: rgba(108,99,255,0.18); }
+
+.tp-hi-row { display: flex; justify-content: space-between; align-items: center; }
+.tp-hi-id { font-size: 11px; font-family: monospace; color: rgba(255,255,255,0.55); }
+.tp-hi-date { font-size: 10px; color: rgba(255,255,255,0.35); }
+
+.tp-hi-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 20px;
+}
+.tp-hi-badge.s-done       { background: rgba(34,197,94,0.2);  color: #86efac; }
+.tp-hi-badge.s-failed     { background: rgba(239,68,68,0.2);   color: #fca5a5; }
+.tp-hi-badge.s-pending,
+.tp-hi-badge.s-processing { background: rgba(245,158,11,0.2);  color: #fcd34d; }
