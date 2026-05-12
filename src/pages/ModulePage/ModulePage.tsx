@@ -4,6 +4,7 @@ import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { type UserResponse } from "@/shared/api/user";
 import { moduleApi, type ModuleResponse } from "@/shared/api/module";
 import { lessonApi, type LessonResponse } from "@/shared/api/lesson";
+import { taskApi } from "@/shared/api/task";
 import "./ModulePage.css";
 
 const formatDescription = (text: string | undefined): string => {
@@ -44,11 +45,12 @@ const DeleteConfirmModal = ({
 };
 
 const ModulePage = () => {
-    const { id: moduleId } = useParams<{ id: string }>();
+    const { moduleId } = useParams<{ moduleId: string }>();
     const navigate = useNavigate();
     const { user } = useOutletContext<{ user: UserResponse }>();
     const [module, setModule] = useState<ModuleResponse | null>(null);
     const [lessons, setLessons] = useState<LessonResponse[]>([]);
+    const [hasTest, setHasTest] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +67,6 @@ const ModulePage = () => {
 
     const fetchModuleData = async () => {
         if (!moduleId) {
-            console.error("moduleId is undefined");
             setError("ID модуля не найден");
             setLoading(false);
             return;
@@ -86,6 +87,16 @@ const ModulePage = () => {
                 (a, b) => a.position - b.position
             );
             setLessons(sortedLessons);
+
+            // Проверяем наличие тестов
+            try {
+                const tasksRes = await taskApi.getAllByModuleId(moduleId);
+                setHasTest(tasksRes.data.tasks && tasksRes.data.tasks.length > 0);
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (err) {
+                // Игнорируем ошибку, тестов нет
+                setHasTest(false);
+            }
         } catch (err) {
             console.error("Failed to fetch module data:", err);
             setError("Не удалось загрузить данные модуля");
@@ -165,6 +176,14 @@ const ModulePage = () => {
 
     const handleCreateLesson = () => {
         navigate(`/modules/${moduleId}/lessons/create`);
+    };
+
+    const handleCreateTest = () => {
+        navigate(`/modules/${moduleId}/tests/create`);
+    };
+
+    const handleViewTest = () => {
+        navigate(`/modules/${moduleId}/test`);
     };
 
     const handleBack = () => {
@@ -249,6 +268,20 @@ const ModulePage = () => {
                             <span className="meta-value">{module.amount_of_lessons || 0}</span>
                         </div>
                     </div>
+
+                    {isTeacher && !isEditing && (
+                        <div className="module-additional-actions">
+                            {hasTest ? (
+                                <button onClick={handleViewTest} className="view-test-button">
+                                    Просмотреть тест
+                                </button>
+                            ) : (
+                                <button onClick={handleCreateTest} className="create-test-button">
+                                    Создать тест
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {isTeacher && (
                         <div className="module-actions">

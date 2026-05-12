@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// Layout.tsx
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { userApi, type UserResponse } from "@/shared/api/user";
 import "./Layout.css";
@@ -9,22 +10,27 @@ const Layout = () => {
     const [user, setUser] = useState<UserResponse | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(true);
+    const isInitialMount = useRef(true);
+
+    const fetchUser = useCallback(async () => {
+        try {
+            setLoading(true);
+            const userRes = await userApi.getMe();
+            setUser(userRes.data);
+        } catch (error) {
+            console.error("Failed to fetch user:", error);
+            if (isInitialMount.current) {
+                navigate("/login");
+            }
+        } finally {
+            setLoading(false);
+            isInitialMount.current = false;
+        }
+    }, [navigate]);
 
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const userRes = await userApi.getMe();
-                setUser(userRes.data);
-            } catch (error) {
-                console.error("Failed to fetch user:", error);
-                navigate("/login");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUser();
-    }, [navigate]);
+    }, [fetchUser]);
 
     const handleLogout = () => {
         localStorage.removeItem("access_token");
@@ -114,7 +120,7 @@ const Layout = () => {
             </header>
 
             <main className="layout-main">
-                <Outlet context={{ user }} />
+                <Outlet context={{ user, refreshUser: fetchUser }} />
             </main>
         </div>
     );

@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { lessonApi } from "@/shared/api/lesson";
+import { fileApi } from "@/shared/api/file";
 import "./CreateLessonPage.css";
 
 // Тип для ошибки API
@@ -135,6 +136,10 @@ const CreateLessonPage = () => {
     const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
     const [currentFontSize, setCurrentFontSize] = useState<string>("3");
     const savedSelectionRef = useRef<Range | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Состояние для файлов
+    const [files, setFiles] = useState<File[]>([]);
 
     // Состояние для модального окна таблицы
     const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -148,17 +153,6 @@ const CreateLessonPage = () => {
             return;
         }
 
-        if (!description.trim()) {
-            setError("Описание урока обязательно");
-            return;
-        }
-
-        const contentText = contentRef.current?.textContent?.trim() || "";
-        if (!contentText) {
-            setError("Содержание урока обязательно");
-            return;
-        }
-
         if (!moduleId) {
             setError("ID модуля не найден");
             return;
@@ -167,6 +161,7 @@ const CreateLessonPage = () => {
         setLoading(true);
 
         try {
+            // Создаем урок
             const response = await lessonApi.post(
                 title.trim(),
                 description.trim(),
@@ -174,7 +169,22 @@ const CreateLessonPage = () => {
                 moduleId,
             );
 
-            navigate(`/lessons/${response.data.id}`);
+            const lessonId = response.data.id;
+
+            // Загружаем файлы, если они есть
+            if (files.length > 0) {
+                const uploadPromises = files.map(file =>
+                    fileApi.post(lessonId, file)
+                        .catch(err => {
+                            console.error(`Failed to upload file ${file.name}:`, err);
+                            return null;
+                        })
+                );
+
+                await Promise.all(uploadPromises);
+            }
+
+            navigate(`/lessons/${lessonId}`);
         } catch (err) {
             console.error("Failed to create lesson:", err);
 
@@ -199,6 +209,40 @@ const CreateLessonPage = () => {
         if (error?.includes("название")) {
             setError(null);
         }
+    };
+
+    // Обработка выбора файлов
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFiles = Array.from(e.target.files || []);
+
+        // Проверка размера файлов (20 МБ)
+        const maxSize = 20 * 1024 * 1024;
+        const oversizedFiles = selectedFiles.filter(file => file.size > maxSize);
+
+        if (oversizedFiles.length > 0) {
+            setError(`Файлы превышают максимальный размер 20 МБ: ${oversizedFiles.map(f => f.name).join(', ')}`);
+            return;
+        }
+
+        setFiles(prev => [...prev, ...selectedFiles]);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    // Удаление файла из списка
+    const handleRemoveFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Форматирование размера файла
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Б';
+        const k = 1024;
+        const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
     // Обновление активных форматов
@@ -360,7 +404,7 @@ const CreateLessonPage = () => {
 
                     <div className="form-group">
                         <label htmlFor="description" className="form-label">
-                            Описание урока *
+                            Описание урока
                         </label>
                         <textarea
                             id="description"
@@ -371,7 +415,7 @@ const CreateLessonPage = () => {
                                     setError(null);
                                 }
                             }}
-                            placeholder="Введите описание урока"
+                            placeholder="Введите описание урока (необязательно)"
                             className={`form-textarea ${error?.includes("Описание") ? "form-input-error" : ""}`}
                             rows={4}
                             disabled={loading}
@@ -380,7 +424,7 @@ const CreateLessonPage = () => {
 
                     <div className="form-group">
                         <label className="form-label">
-                            Содержание урока *
+                            Содержание урока
                         </label>
                         <div className="editor-toolbar">
                             <button
@@ -550,9 +594,58 @@ const CreateLessonPage = () => {
                             onKeyDown={handleKeyDown}
                             onKeyUp={updateActiveFormats}
                             onClick={updateActiveFormats}
-                            data-placeholder="Введите содержание урока..."
+                            data-placeholder="Введите содержание урока (необязательно)..."
                             suppressContentEditableWarning={true}
                         />
+                    </div>
+
+                    {/* Секция загрузки файлов */}
+                    <div className="form-group">
+                        <label className="form-label">
+                            Файлы урока
+                        </label>
+                        <div className="file-upload-section">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                onChange={handleFileSelect}
+                                className="file-input-hidden"
+                                id="file-upload"
+                                disabled={loading}
+                            />
+                            <label htmlFor="file-upload" className="file-upload-button">
+                                📎 Выбрать файлы
+                            </label>
+                            <span className="file-upload-hint">
+                                Максимальный размер файла: 20 МБ
+                            </span>
+                        </div>
+
+                        {files.length > 0 && (
+                            <div className="file-list">
+                                {files.map((file, index) => (
+                                    <div key={`${file.name}-${index}`} className="file-item">
+                                        <div className="file-info">
+                                            <span className="file-icon">📄</span>
+                                            <div className="file-details">
+                                                <span className="file-name">{file.name}</span>
+                                                <span className="file-size">{formatFileSize(file.size)}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveFile(index)}
+                                            className="file-remove-button"
+                                            disabled={loading}
+                                            title="Удалить файл"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {error && <div className="form-error">{error}</div>}

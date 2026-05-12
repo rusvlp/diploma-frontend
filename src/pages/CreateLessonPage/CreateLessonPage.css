@@ -508,7 +508,6 @@
     text-align: center;
 }
 
-/* Убираем стрелки у input[type="number"] */
 .table-form-input::-webkit-inner-spin-button,
 .table-form-input::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -517,4 +516,131 @@
 
 .table-form-input[type=number] {
     -moz-appearance: textfield;
+}
+
+.file-upload-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+.file-upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    background: white;
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.file-upload-button:hover {
+    background: #f0f2ff;
+    border-color: #5a6fd6;
+}
+
+.file-upload-button:active {
+    transform: scale(0.98);
+}
+
+.file-upload-hint {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.file-item:hover {
+    background: #f1f5f9;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.file-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.file-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.file-remove-button {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.file-remove-button:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.file-remove-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.file-upload-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }

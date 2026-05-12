@@ -67,6 +67,10 @@ const LoginPage = () => {
             </Button>
 
             <p>
+                <Link to="/signup">Забыли пароль?</Link>
+            </p>
+
+            <p>
                 Нет аккаунта? <Link to="/signup">Регистрация</Link>
             </p>
         </div>

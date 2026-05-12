@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { type UserResponse } from "@/shared/api/user";
 import { lessonApi, type LessonResponse } from "@/shared/api/lesson";
+import { fileApi, type FileResponse } from "@/shared/api/file";
 import "./LessonPage.css";
 
 const formatDescription = (text: string | undefined): string => {
@@ -170,6 +171,12 @@ const LessonPage = () => {
     const [currentFontSize, setCurrentFontSize] = useState<string>("3");
     const originalContentRef = useRef<string>("");
     const savedSelectionRef = useRef<Range | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Состояния для файлов
+    const [existingFiles, setExistingFiles] = useState<FileResponse[]>([]);
+    const [newFiles, setNewFiles] = useState<File[]>([]);
+    const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
 
     // Состояния для модальных окон
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -192,6 +199,14 @@ const LessonPage = () => {
             setEditedTitle(lessonRes.data.title);
             setEditedDescription(lessonRes.data.description);
             originalContentRef.current = lessonRes.data.content || "";
+
+            // Загружаем файлы урока
+            try {
+                const filesRes = await fileApi.getByLessonId(lessonId);
+                setExistingFiles(filesRes.data.files || []);
+            } catch (err) {
+                console.error("Failed to fetch files:", err);
+            }
         } catch (err) {
             console.error("Failed to fetch lesson data:", err);
             setError("Не удалось загрузить данные урока");
@@ -210,13 +225,137 @@ const LessonPage = () => {
             const titleChanged = editedTitle.trim() !== lesson.title;
             const descriptionChanged = editedDescription.trim() !== lesson.description;
             const contentChanged = contentRef.current?.innerHTML !== originalContentRef.current;
-            setHasChanges(titleChanged || descriptionChanged || contentChanged);
+            const filesChanged = newFiles.length > 0 || filesToDelete.length > 0;
+            setHasChanges(titleChanged || descriptionChanged || contentChanged || filesChanged);
         }
-    }, [editedTitle, editedDescription, lesson, isEditing]);
+    }, [editedTitle, editedDescription, lesson, isEditing, newFiles, filesToDelete]);
 
     useEffect(() => {
         checkChanges();
-    }, [editedTitle, editedDescription, checkChanges]);
+    }, [editedTitle, editedDescription, newFiles, filesToDelete, checkChanges]);
+
+    const getDisplayFileName = (objectName: string): string => {
+        // object_name имеет формат "lessons/{id урока}/{id файла}/{название файла}.{расширение}"
+        const parts = objectName.split('/');
+        // Возвращаем последнюю часть пути - имя файла с расширением
+        return parts[parts.length - 1] || objectName;
+    };
+
+// Функция для извлечения расширения файла
+    const getFileExtension = (objectName: string): string => {
+        const fileName = getDisplayFileName(objectName);
+        const parts = fileName.split('.');
+        return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    };
+
+// Функция для получения иконки в зависимости от типа файла
+    const getFileIcon = (objectName: string): string => {
+        const ext = getFileExtension(objectName);
+
+        const iconMap: Record<string, string> = {
+            // Документы
+            'pdf': '📕',
+            'doc': '📘',
+            'docx': '📘',
+            'txt': '📄',
+            'rtf': '📄',
+
+            // Таблицы
+            'xls': '📊',
+            'xlsx': '📊',
+            'csv': '📊',
+
+            // Презентации
+            'ppt': '📽️',
+            'pptx': '📽️',
+
+            // Изображения
+            'jpg': '🖼️',
+            'jpeg': '🖼️',
+            'png': '🖼️',
+            'gif': '🖼️',
+            'svg': '🖼️',
+            'webp': '🖼️',
+
+            // Архивы
+            'zip': '📦',
+            'rar': '📦',
+            '7z': '📦',
+            'tar': '📦',
+            'gz': '📦',
+
+            // Код
+            'js': '💻',
+            'ts': '💻',
+            'jsx': '💻',
+            'tsx': '💻',
+            'html': '💻',
+            'css': '💻',
+            'json': '💻',
+            'xml': '💻',
+            'go': '💻',
+            'java': '💻',
+            'jar': '💻',
+            'py': '💻',
+            'cpp': '💻',
+
+            // Видео
+            'mp4': '🎥',
+            'avi': '🎥',
+            'mov': '🎥',
+            'webm': '🎥',
+            'mkv': '🎥',
+
+            // Аудио
+            'mp3': '🎵',
+            'wav': '🎵',
+            'ogg': '🎵',
+        };
+
+        return iconMap[ext] || '📎';
+    };
+
+    // Обработка выбора новых файлов
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFiles = Array.from(e.target.files || []);
+
+        const maxSize = 20 * 1024 * 1024;
+        const oversizedFiles = selectedFiles.filter(file => file.size > maxSize);
+
+        if (oversizedFiles.length > 0) {
+            setError(`Файлы превышают максимальный размер 20 МБ: ${oversizedFiles.map(f => f.name).join(', ')}`);
+            return;
+        }
+
+        setNewFiles(prev => [...prev, ...selectedFiles]);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    // Удаление нового файла (еще не загруженного)
+    const handleRemoveNewFile = (index: number) => {
+        setNewFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Пометить существующий файл на удаление
+    const handleMarkFileForDeletion = (fileId: string) => {
+        setFilesToDelete(prev => [...prev, fileId]);
+    };
+
+    // Отменить удаление существующего файла
+    const handleUnmarkFileForDeletion = (fileId: string) => {
+        setFilesToDelete(prev => prev.filter(id => id !== fileId));
+    };
+
+    const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Б';
+        const k = 1024;
+        const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
 
     // Обновление активных форматов
     const updateActiveFormats = useCallback(() => {
@@ -335,12 +474,13 @@ const LessonPage = () => {
 
     const handleEdit = () => {
         setIsEditing(true);
+        setNewFiles([]);
+        setFilesToDelete([]);
         setTimeout(() => {
             if (contentRef.current && lesson) {
                 contentRef.current.innerHTML = lesson.content || "";
                 contentRef.current.focus();
 
-                // Ставим курсор в конец при начале редактирования
                 const selection = window.getSelection();
                 if (selection && contentRef.current) {
                     const range = document.createRange();
@@ -360,6 +500,8 @@ const LessonPage = () => {
         }
         setIsEditing(false);
         setHasChanges(false);
+        setNewFiles([]);
+        setFilesToDelete([]);
         savedSelectionRef.current = null;
     };
 
@@ -377,11 +519,34 @@ const LessonPage = () => {
                 updatedContent
             );
 
+            // Удаляем помеченные файлы
+            for (const fileId of filesToDelete) {
+                const file = existingFiles.find(f => f.id === fileId);
+                if (file) {
+                    try {
+                        await fileApi.delete(fileId, file.object_name);
+                    } catch (err) {
+                        console.error(`Failed to delete file ${fileId}:`, err);
+                    }
+                }
+            }
+
+            // Загружаем новые файлы
+            for (const file of newFiles) {
+                try {
+                    await fileApi.post(lessonId, file);
+                } catch (err) {
+                    console.error(`Failed to upload file ${file.name}:`, err);
+                }
+            }
+
             originalContentRef.current = updatedContent;
 
             await fetchLessonData();
             setIsEditing(false);
             setHasChanges(false);
+            setNewFiles([]);
+            setFilesToDelete([]);
             savedSelectionRef.current = null;
         } catch (err) {
             console.error("Failed to update lesson:", err);
@@ -482,15 +647,142 @@ const LessonPage = () => {
                             rows={4}
                         />
                     ) : (
-                        <div className="lesson-description-full">
-                            {formatDescription(lesson.description).split('\n').map((line, idx, arr) => (
-                                <span key={idx}>
-                                    {line}
-                                    {idx < arr.length - 1 && <br />}
-                                </span>
-                            ))}
-                        </div>
+                        lesson.description && (
+                            <div className="lesson-description-full">
+                                {formatDescription(lesson.description).split('\n').map((line, idx, arr) => (
+                                    <span key={idx}>
+                        {line}
+                                        {idx < arr.length - 1 && <br />}
+                    </span>
+                                ))}
+                            </div>
+                        )
                     )}
+
+                    {/* Мета-информация урока */}
+                    <div className="lesson-meta-info">
+                        {lesson.position && (
+                            <div className="meta-item">
+                                <span className="meta-label">Позиция:</span>
+                                <span className="meta-value">Урок #{lesson.position}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Секция файлов */}
+                    <div className="files-section">
+                        <h3 className="files-title">Файлы урока</h3>
+
+                        {!isEditing && existingFiles.length === 0 && (
+                            <p className="no-files">Нет прикрепленных файлов</p>
+                        )}
+
+                        {/* Отображение существующих файлов */}
+                        {(existingFiles.length > 0 || (isEditing && existingFiles.filter(f => !filesToDelete.includes(f.id)).length > 0)) && (
+                            <div className="file-list">
+                                {existingFiles
+                                    .filter(f => !filesToDelete.includes(f.id))
+                                    .map((file) => (
+                                        <div key={file.id} className="file-item">
+                                            <div className="file-info">
+                                                <span className="file-icon">{getFileIcon(file.object_name)}</span>
+                                                <div className="file-details">
+                                                    <a
+                                                        href={file.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="file-link"
+                                                        title={file.object_name}
+                                                    >
+                                                        {getDisplayFileName(file.object_name)}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            {isEditing && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleMarkFileForDeletion(file.id)}
+                                                    className="file-remove-button"
+                                                    title="Удалить файл"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+
+                        {/* Файлы, помеченные на удаление */}
+                        {isEditing && filesToDelete.length > 0 && (
+                            <div className="file-list deleted-files">
+                                <p className="deleted-files-label">Будут удалены:</p>
+                                {existingFiles
+                                    .filter(f => filesToDelete.includes(f.id))
+                                    .map((file) => (
+                                        <div key={file.id} className="file-item file-item-deleted">
+                                            <div className="file-info">
+                                                <span className="file-icon">{getFileIcon(file.object_name)}</span>
+                                                <span className="file-name">{getDisplayFileName(file.object_name)}</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleUnmarkFileForDeletion(file.id)}
+                                                className="file-restore-button"
+                                                title="Отменить удаление"
+                                            >
+                                                ↩
+                                            </button>
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+
+                        {/* Новые файлы для загрузки */}
+                        {isEditing && newFiles.length > 0 && (
+                            <div className="file-list">
+                                {newFiles.map((file, index) => (
+                                    <div key={`new-${index}`} className="file-item file-item-new">
+                                        <div className="file-info">
+                                            <span className="file-icon">{getFileIcon(file.name)}</span>
+                                            <div className="file-details">
+                                                <span className="file-name">{file.name}</span>
+                                                <span className="file-size">{formatFileSize(file.size)}</span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveNewFile(index)}
+                                            className="file-remove-button"
+                                            title="Удалить файл"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Кнопка добавления файлов при редактировании */}
+                        {isEditing && (
+                            <div className="file-upload-section">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    onChange={handleFileSelect}
+                                    className="file-input-hidden"
+                                    id="file-upload-edit"
+                                />
+                                <label htmlFor="file-upload-edit" className="file-upload-button">
+                                    📎 Добавить файлы
+                                </label>
+                                <span className="file-upload-hint">
+                                    Максимальный размер файла: 20 МБ
+                                </span>
+                            </div>
+                        )}
+                    </div>
 
                     {isTeacher && (
                         <div className="lesson-actions">
@@ -708,10 +1000,12 @@ const LessonPage = () => {
                             suppressContentEditableWarning={true}
                         />
                     ) : (
-                        <div
-                            className="lesson-content-html"
-                            dangerouslySetInnerHTML={{ __html: lesson.content || "" }}
-                        />
+                        lesson.content && (
+                            <div
+                                className="lesson-content-html"
+                                dangerouslySetInnerHTML={{ __html: lesson.content }}
+                            />
+                        )
                     )}
                 </div>
             </div>

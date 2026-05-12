@@ -1,9 +1,12 @@
 // CoursePage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { userApi, type UserResponse } from "@/shared/api/user";
 import { courseApi, type CourseResponse } from "@/shared/api/course";
 import { moduleApi, type ModuleResponse } from "@/shared/api/module";
+import { taskApi } from "@/shared/api/task";
+import { groupApi, type GroupResponse } from "@/shared/api/group";
+import { groupCourseApi } from "@/shared/api/groupCourse";
 import "./CoursePage.css";
 
 const formatDescription = (text: string | undefined): string => {
@@ -50,12 +53,13 @@ const DeleteConfirmModal = ({
 };
 
 const CoursePage = () => {
-    const { id } = useParams<{ id: string }>();
+    const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
     const { user } = useOutletContext<{ user: UserResponse }>();
     const [course, setCourse] = useState<CourseResponse | null>(null);
     const [owner, setOwner] = useState<UserResponse | null>(null);
     const [modules, setModules] = useState<ModuleResponse[]>([]);
+    const [hasTest, setHasTest] = useState(false);
     const [loading, setLoading] = useState(true);
     const [publishing, setPublishing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -68,18 +72,26 @@ const CoursePage = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
 
+    // Состояния для групп
+    const [allGroups, setAllGroups] = useState<GroupResponse[]>([]);
+    const [attachedGroups, setAttachedGroups] = useState<GroupResponse[]>([]);
+    const [loadingGroups, setLoadingGroups] = useState(false);
+    const [attachingGroup, setAttachingGroup] = useState<string | null>(null);
+    const [detachingGroup, setDetachingGroup] = useState<string | null>(null);
+    const originalAttachedGroupsRef = useRef<GroupResponse[]>([]);
+
     // Состояние для модального окна удаления
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchCourseData = async () => {
-        if (!id) return;
+        if (!courseId) return;
 
         setLoading(true);
         setError(null);
 
         try {
-            const courseRes = await courseApi.getById(id);
+            const courseRes = await courseApi.getById(courseId);
             setCourse(courseRes.data);
             setEditedTitle(courseRes.data.title);
             setEditedDescription(courseRes.data.description);
@@ -90,11 +102,20 @@ const CoursePage = () => {
                 setOwner(ownerRes.data);
             }
 
-            const modulesRes = await moduleApi.getAllByCourseId(id);
+            const modulesRes = await moduleApi.getAllByCourseId(courseId);
             const sortedModules = (modulesRes.data.modules || []).sort(
                 (a, b) => a.position - b.position
             );
             setModules(sortedModules);
+
+            // Проверяем наличие тестов
+            try {
+                const tasksRes = await taskApi.getAllByCourseId(courseId);
+                setHasTest(tasksRes.data.tasks && tasksRes.data.tasks.length > 0);
+            } catch (err) {
+                console.error(err);
+                setHasTest(false);
+            }
         } catch (err) {
             console.error("Failed to fetch course data:", err);
             setError("Не удалось загрузить данные курса");
@@ -105,7 +126,49 @@ const CoursePage = () => {
 
     useEffect(() => {
         fetchCourseData();
-    }, [id]);
+    }, [courseId]);
+
+    // Загрузка групп при входе в режим редактирования с типом "group_only"
+    useEffect(() => {
+        if (isEditing && editedAccessType === "group_only") {
+            loadGroups();
+        }
+    }, [isEditing, editedAccessType]);
+
+    const loadGroups = async () => {
+        if (!courseId) return;
+
+        setLoadingGroups(true);
+        try {
+            const groupsRes = await groupApi.getMy();
+            const userGroups = groupsRes.data.groups || [];
+            setAllGroups(userGroups);
+
+            try {
+                const groupCoursesRes = await groupCourseApi.getByCourseId(courseId);
+                if (groupCoursesRes.data?.group_courses) {
+                    const attachedGroupIds = groupCoursesRes.data.group_courses.map(gc => gc.group_id);
+                    const attached = userGroups.filter(g => attachedGroupIds.includes(g.id));
+                    setAttachedGroups(attached);
+                    originalAttachedGroupsRef.current = [...attached];
+                } else {
+                    setAttachedGroups([]);
+                    originalAttachedGroupsRef.current = [];
+                }
+            } catch (err) {
+                console.error("Failed to fetch attached groups:", err);
+                setAttachedGroups([]);
+                originalAttachedGroupsRef.current = [];
+            }
+        } catch (err) {
+            console.error("Failed to fetch groups:", err);
+            setAllGroups([]);
+            setAttachedGroups([]);
+            originalAttachedGroupsRef.current = [];
+        } finally {
+            setLoadingGroups(false);
+        }
+    };
 
     // Проверка изменений при редактировании
     useEffect(() => {
@@ -113,27 +176,74 @@ const CoursePage = () => {
             const titleChanged = editedTitle.trim() !== course.title;
             const descriptionChanged = editedDescription.trim() !== course.description;
             const accessTypeChanged = editedAccessType !== course.access_type;
-            setHasChanges(titleChanged || descriptionChanged || accessTypeChanged);
+
+            // Проверяем изменения в группах
+            let groupsChanged = false;
+            if (editedAccessType === "group_only") {
+                const originalIds = originalAttachedGroupsRef.current.map(g => g.id).sort();
+                const currentIds = attachedGroups.map(g => g.id).sort();
+                groupsChanged = originalIds.length !== currentIds.length ||
+                    originalIds.some((id, index) => id !== currentIds[index]);
+            }
+
+            setHasChanges(titleChanged || descriptionChanged || accessTypeChanged || groupsChanged);
         }
-    }, [editedTitle, editedDescription, editedAccessType, course, isEditing]);
+    }, [editedTitle, editedDescription, editedAccessType, attachedGroups, course, isEditing]);
 
-    const handlePublish = async () => {
-        if (!id) return;
+    // Прикрепление группы к курсу
+    const handleAttachGroup = async (groupId: string) => {
+        if (!courseId) return;
 
-        setPublishing(true);
+        setAttachingGroup(groupId);
         try {
-            await courseApi.patchPublish(id);
-            await fetchCourseData();
+            await groupCourseApi.post(groupId, courseId);
+
+            // Обновляем список прикрепленных групп
+            const group = allGroups.find(g => g.id === groupId);
+            if (group) {
+                setAttachedGroups(prev => [...prev, group]);
+            }
         } catch (err) {
-            console.error("Failed to publish course:", err);
-            setError("Не удалось опубликовать курс");
+            console.error("Failed to attach group:", err);
+            setError("Не удалось прикрепить группу");
         } finally {
-            setPublishing(false);
+            setAttachingGroup(null);
         }
     };
 
+    // Открепление группы от курса
+    const handleDetachGroup = async (groupId: string) => {
+        if (!courseId) return;
+
+        setDetachingGroup(groupId);
+        try {
+            const groupCoursesRes = await groupCourseApi.getByCourseId(courseId);
+            const groupCourse = groupCoursesRes.data.group_courses.find(
+                gc => gc.group_id === groupId
+            );
+
+            if (groupCourse) {
+                await groupCourseApi.delete(groupCourse.id);
+                setAttachedGroups(prev => prev.filter(g => g.id !== groupId));
+            }
+        } catch (err) {
+            console.error("Failed to detach group:", err);
+            setError("Не удалось открепить группу");
+        } finally {
+            setDetachingGroup(null);
+        }
+    };
+
+    // Группы, доступные для прикрепления (еще не прикрепленные)
+    const availableGroups = allGroups.filter(
+        group => !attachedGroups.find(attached => attached.id === group.id)
+    );
+
     const handleEdit = () => {
         setIsEditing(true);
+        if (course?.access_type === "group_only") {
+            loadGroups();
+        }
     };
 
     const handleCancel = () => {
@@ -141,13 +251,15 @@ const CoursePage = () => {
             setEditedTitle(course.title);
             setEditedDescription(course.description);
             setEditedAccessType(course.access_type);
+            // Восстанавливаем оригинальный список групп
+            setAttachedGroups([...originalAttachedGroupsRef.current]);
         }
         setIsEditing(false);
         setHasChanges(false);
     };
 
     const handleSave = async () => {
-        if (!id || !course) return;
+        if (!courseId || !course) return;
 
         setIsSaving(true);
         try {
@@ -167,7 +279,7 @@ const CoursePage = () => {
             }
 
             if (Object.keys(updateData).length > 0) {
-                await courseApi.patch(id, updateData);
+                await courseApi.patch(courseId, updateData);
             }
 
             await fetchCourseData();
@@ -181,12 +293,27 @@ const CoursePage = () => {
         }
     };
 
+    const handlePublish = async () => {
+        if (!courseId) return;
+
+        setPublishing(true);
+        try {
+            await courseApi.patchPublish(courseId);
+            await fetchCourseData();
+        } catch (err) {
+            console.error("Failed to publish course:", err);
+            setError("Не удалось опубликовать курс");
+        } finally {
+            setPublishing(false);
+        }
+    };
+
     const handleDelete = async () => {
-        if (!id) return;
+        if (!courseId) return;
 
         setIsDeleting(true);
         try {
-            await courseApi.delete(id);
+            await courseApi.delete(courseId);
             navigate("/");
         } catch (err) {
             console.error("Failed to delete course:", err);
@@ -198,7 +325,19 @@ const CoursePage = () => {
     };
 
     const handleCreateModule = () => {
-        navigate(`/courses/${id}/modules/create`);
+        navigate(`/courses/${courseId}/modules/create`);
+    };
+
+    const handleCreateTest = () => {
+        navigate(`/courses/${courseId}/tests/create`);
+    };
+
+    const handleViewTest = () => {
+        navigate(`/courses/${courseId}/test`);
+    };
+
+    const handleCreateGroup = () => {
+        navigate("/groups/create");
     };
 
     const handleBack = () => {
@@ -304,6 +443,117 @@ const CoursePage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Секция групп при редактировании */}
+                    {isEditing && editedAccessType === "group_only" && (
+                        <div className="groups-section">
+                            <div className="groups-header">
+                                <h3 className="groups-title">Группы</h3>
+                                <button
+                                    type="button"
+                                    onClick={handleCreateGroup}
+                                    className="create-group-button"
+                                >
+                                    + Создать группу
+                                </button>
+                            </div>
+
+                            {loadingGroups ? (
+                                <div className="groups-loading">Загрузка групп...</div>
+                            ) : allGroups.length === 0 ? (
+                                <div className="groups-empty">
+                                    <p>В настоящий момент нет созданных групп</p>
+                                    <p className="groups-empty-hint">Создайте группу, чтобы прикрепить её к курсу</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Прикрепленные группы */}
+                                    {attachedGroups.length > 0 && (
+                                        <div className="attached-groups">
+                                            <h4 className="groups-subtitle">Прикрепленные группы</h4>
+                                            <div className="groups-list">
+                                                {attachedGroups.map((group) => (
+                                                    <div key={group.id} className="group-item attached">
+                                                        <div className="group-info">
+                                                            <span className="group-icon">👥</span>
+                                                            <div className="group-details">
+                                                                <span className="group-name">{group.title}</span>
+                                                                {group.description && (
+                                                                    <span className="group-description">
+                                                                        {group.description.length > 60
+                                                                            ? group.description.substring(0, 60) + '...'
+                                                                            : group.description}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDetachGroup(group.id)}
+                                                            className="detach-group-button"
+                                                            disabled={detachingGroup === group.id}
+                                                            title="Открепить группу"
+                                                        >
+                                                            {detachingGroup === group.id ? "..." : "✕"}
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Доступные группы */}
+                                    {availableGroups.length > 0 && (
+                                        <div className="available-groups">
+                                            <h4 className="groups-subtitle">Доступные группы</h4>
+                                            <div className="groups-list">
+                                                {availableGroups.map((group) => (
+                                                    <div key={group.id} className="group-item">
+                                                        <div className="group-info">
+                                                            <span className="group-icon">👥</span>
+                                                            <div className="group-details">
+                                                                <span className="group-name">{group.title}</span>
+                                                                {group.description && (
+                                                                    <span className="group-description">
+                                                                        {group.description.length > 60
+                                                                            ? group.description.substring(0, 60) + '...'
+                                                                            : group.description}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAttachGroup(group.id)}
+                                                            className="attach-group-button"
+                                                            disabled={attachingGroup === group.id}
+                                                            title="Прикрепить группу"
+                                                        >
+                                                            {attachingGroup === group.id ? "..." : "+"}
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {isTeacher && !isEditing && (
+                        <div className="course-additional-actions">
+                            {hasTest ? (
+                                <button onClick={handleViewTest} className="view-test-button">
+                                    Просмотреть тест
+                                </button>
+                            ) : (
+                                <button onClick={handleCreateTest} className="create-test-button">
+                                    Создать тест
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {isTeacher && (
                         <div className="course-actions">
