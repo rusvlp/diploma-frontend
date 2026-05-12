@@ -10,6 +10,7 @@ import ModulePage from "@/pages/ModulePage/ModulePage.tsx";
 import CreateLessonPage from "@/pages/CreateLessonPage/CreateLessonPage.tsx";
 import LessonPage from "@/pages/LessonPage/LessonPage.tsx";
 import TerrainPage from "@/pages/TerrainPage/TerrainPage.tsx";
+import LocationsPage from "@/pages/LocationsPage/LocationsPage.tsx";
 
 export const AppRouter = () => (
     <BrowserRouter>
@@ -27,6 +28,7 @@ export const AppRouter = () => (
                 <Route path="/modules/:id/lessons/create" element={<CreateLessonPage/>}/>
                 <Route path="/lessons/:id" element={<LessonPage />} />
                 <Route path="/terrain" element={<TerrainPage />} />
+                <Route path="/locations" element={<LocationsPage />} />
             </Route>
         </Routes>
     </BrowserRouter>

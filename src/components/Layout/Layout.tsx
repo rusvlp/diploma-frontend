@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { userApi, type UserResponse } from "@/shared/api/user";
 import "./Layout.css";
 
 const Layout = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState<UserResponse | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -40,9 +41,8 @@ const Layout = () => {
         navigate("/");
     };
 
-    const handleTerrain = () => {
-        navigate("/terrain");
-    };
+    const handleTerrain = () => navigate("/terrain");
+    const handleLocations = () => navigate("/locations");
 
     if (loading) {
         return (
@@ -63,8 +63,17 @@ const Layout = () => {
                         Сервис курсов
                     </h1>
                     <nav className="header-nav">
-                        <button className="nav-link" onClick={handleTerrain}>
+                        <button
+                            className={`nav-link${location.pathname === "/terrain" ? " active" : ""}`}
+                            onClick={handleTerrain}
+                        >
                             Генерация ландшафта
+                        </button>
+                        <button
+                            className={`nav-link${location.pathname === "/locations" ? " active" : ""}`}
+                            onClick={handleLocations}
+                        >
+                            Локации
                         </button>
                     </nav>
                 </div>

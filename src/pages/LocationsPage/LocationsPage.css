@@ -1,0 +1,329 @@
+.lp-root {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ── Left panel ── */
+.lp-panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    padding: 20px 16px;
+    gap: 14px;
+}
+
+.lp-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.lp-empty {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    margin: 0;
+}
+
+.lp-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lp-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.lp-item:hover { background: rgba(255,255,255,0.11); }
+.lp-item.active { background: rgba(108,99,255,0.22); }
+
+.lp-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lp-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.lp-item-date {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+}
+
+.lp-item-meta {
+    font-size: 10px;
+    color: rgba(255,255,255,0.45);
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.lp-del-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.35);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+.lp-del-btn:hover { color: #fca5a5; }
+
+/* ── Right viewer ── */
+.lp-viewer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0d1117;
+}
+
+.lp-viewer .terrain-viewer {
+    flex: 1;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
+.lp-empty-viewer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.25);
+    font-size: 15px;
+}
+
+/* ── Settings overlay card ── */
+.lp-settings-card {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 10;
+}
+
+.lp-settings-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lp-loc-name {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lp-settings-input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1.5px solid #6c63ff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    color: #1a1a2e;
+    min-width: 0;
+}
+
+.lp-edit-btn {
+    background: transparent;
+    border: 1.5px solid #6c63ff;
+    color: #6c63ff;
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+.lp-edit-btn:hover { background: #6c63ff; color: white; }
+
+.lp-settings-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lp-settings-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lp-settings-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.lp-settings-val {
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+}
+
+.lp-settings-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    cursor: pointer;
+}
+.lp-settings-checkbox input {
+    width: 15px;
+    height: 15px;
+    accent-color: #6c63ff;
+    cursor: pointer;
+}
+
+.lp-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #e0e0e0;
+    outline: none;
+    cursor: pointer;
+}
+.lp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6c63ff;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(108,99,255,0.4);
+}
+.lp-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6c63ff;
+    cursor: pointer;
+    border: none;
+}
+
+.lp-save-btn {
+    padding: 10px;
+    background: #1a1a2e;
+    color: white;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s, transform 0.1s;
+}
+.lp-save-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+.lp-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.lp-settings-divider {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 0 0;
+    border-top: 1px solid #e8e8e8;
+    margin-top: 2px;
+}
+
+.lp-save-msg {
+    font-size: 12px;
+    color: #22c55e;
+    margin: 0;
+    text-align: center;
+}
+.lp-save-msg.error { color: #ef4444; }
+
+/* ── Brush row ── */
+.lp-brush-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.lp-brush-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1.5px solid #6c63ff;
+    border-radius: 8px;
+    background: transparent;
+    color: #6c63ff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+.lp-brush-btn:hover { background: rgba(108,99,255,0.1); }
+.lp-brush-btn.active { background: #6c63ff; color: white; }
+.lp-brush-erase-btn { border-color: #e55; color: #e55; }
+.lp-brush-erase-btn:hover { background: rgba(238,85,85,0.1); }
+.lp-brush-erase-btn.active { background: #e55; color: white; }
+.lp-brush-clear-btn {
+    padding: 8px 10px;
+    border: 1.5px solid #ef4444;
+    border-radius: 8px;
+    background: transparent;
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+.lp-brush-clear-btn:hover { background: #ef4444; color: white; }
