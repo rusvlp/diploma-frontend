@@ -400,7 +400,6 @@ const CoursePage = () => {
     const handleCreateTest = () => navigate(`/courses/${courseId}/tests/create`);
     const handleViewTest = () => navigate(`/courses/${courseId}/test`);
     const handleStatistics = () => navigate(`/courses/${courseId}/statistics`);
-    const handleCreateGroup = () => navigate("/groups/create");
     const handleBack = () => navigate("/");
 
     if (loading) {
@@ -501,7 +500,6 @@ const CoursePage = () => {
                         <div className="groups-section">
                             <div className="groups-header">
                                 <h3 className="groups-title">Группы</h3>
-                                <button type="button" onClick={handleCreateGroup} className="create-group-button">+ Создать группу</button>
                             </div>
                             {loadingGroups ? (
                                 <div className="groups-loading">Загрузка групп...</div>
